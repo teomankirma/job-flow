@@ -1,38 +1,183 @@
 import asyncio
 import logging
-import os
 import signal
+import time
+import uuid
+from datetime import datetime, timezone
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-)
+
+def _utcnow() -> datetime:
+    """Return a naive UTC datetime (matches TIMESTAMP WITHOUT TIME ZONE columns)."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+from sqlalchemy import select
+
+from app.config import Config
+from app import database as db
+from app.handlers import get_handler
+from app.log_config import setup_logging
+from app.models import Job
+from app import redis_client as rc
+
 logger = logging.getLogger(__name__)
 
 shutdown_event = asyncio.Event()
+in_flight_tasks: set[asyncio.Task] = set()
 
 
-def handle_signal(sig, _frame):
-    logger.info("Received signal %s, shutting down...", sig)
+def handle_signal(sig: int, _frame) -> None:
+    logger.info(
+        "Received signal %s, initiating graceful shutdown...",
+        signal.Signals(sig).name,
+    )
     shutdown_event.set()
 
 
-async def main():
+async def process_job(job_id_str: str, semaphore: asyncio.Semaphore) -> None:
+    async with semaphore:
+        start_time = time.monotonic()
+
+        try:
+            job_id = uuid.UUID(job_id_str)
+        except ValueError:
+            logger.error("Invalid job ID from queue: '%s', skipping", job_id_str)
+            return
+
+        log_extra: dict = {"job_id": str(job_id)}
+
+        try:
+            async with db.async_session_factory() as session:
+                result = await session.execute(select(Job).where(Job.id == job_id))
+                job = result.scalar_one_or_none()
+
+                if job is None:
+                    logger.warning("Job not found in database, skipping", extra=log_extra)
+                    return
+
+                log_extra["job_type"] = job.type
+
+                if job.status != "pending":
+                    logger.warning(
+                        "Job status is '%s', expected 'pending', skipping",
+                        job.status,
+                        extra=log_extra,
+                    )
+                    return
+
+                # Transition to processing
+                job.status = "processing"
+                job.attempts += 1
+                job.updated_at = _utcnow()
+                await session.commit()
+
+                log_extra["attempts"] = job.attempts
+                logger.info("Job started", extra=log_extra)
+
+                # Look up and execute handler
+                handler = get_handler(job.type)
+                if handler is None:
+                    raise ValueError(f"Unknown job type: '{job.type}'")
+
+                await handler(job.payload)
+
+                # Success
+                job.status = "completed"
+                job.error_message = None
+                job.updated_at = _utcnow()
+                await session.commit()
+
+                duration_ms = int((time.monotonic() - start_time) * 1000)
+                logger.info(
+                    "Job completed",
+                    extra={**log_extra, "status": "completed", "duration_ms": duration_ms},
+                )
+
+        except Exception as exc:
+            duration_ms = int((time.monotonic() - start_time) * 1000)
+            error_msg = f"{type(exc).__name__}: {exc}"
+
+            logger.error(
+                "Job failed: %s",
+                error_msg,
+                extra={**log_extra, "status": "failed", "error": error_msg, "duration_ms": duration_ms},
+            )
+
+            try:
+                async with db.async_session_factory() as session:
+                    result = await session.execute(select(Job).where(Job.id == job_id))
+                    job = result.scalar_one_or_none()
+                    if job:
+                        job.status = "failed"
+                        job.error_message = error_msg[:2000]
+                        job.updated_at = _utcnow()
+                        await session.commit()
+            except Exception as db_exc:
+                logger.error(
+                    "Failed to update job status to 'failed' in DB: %s",
+                    db_exc,
+                    extra=log_extra,
+                )
+
+
+async def worker_loop() -> None:
+    semaphore = asyncio.Semaphore(Config.MAX_CONCURRENCY)
+    queue_name = Config.QUEUE_NAME
+    poll_timeout = Config.QUEUE_POLL_TIMEOUT
+
+    logger.info(
+        "Worker loop started (queue=%s, concurrency=%d, poll_timeout=%ds)",
+        queue_name,
+        Config.MAX_CONCURRENCY,
+        poll_timeout,
+    )
+
+    while not shutdown_event.is_set():
+        try:
+            result = await rc.redis_client.blpop(queue_name, timeout=poll_timeout)
+
+            if result is None:
+                continue
+
+            _key, job_id_str = result
+
+            logger.info("Job received from queue", extra={"job_id": job_id_str})
+
+            task = asyncio.create_task(process_job(job_id_str, semaphore))
+            in_flight_tasks.add(task)
+            task.add_done_callback(in_flight_tasks.discard)
+
+        except asyncio.CancelledError:
+            break
+        except Exception as exc:
+            logger.error("Error in worker loop: %s", exc, exc_info=True)
+            await asyncio.sleep(1.0)
+
+    if in_flight_tasks:
+        logger.info("Waiting for %d in-flight job(s) to complete...", len(in_flight_tasks))
+        await asyncio.gather(*in_flight_tasks, return_exceptions=True)
+
+    logger.info("Worker loop stopped")
+
+
+async def main() -> None:
+    setup_logging()
+
     signal.signal(signal.SIGTERM, handle_signal)
     signal.signal(signal.SIGINT, handle_signal)
 
     logger.info("Worker starting...")
-    logger.info("REDIS_URL: %s", os.getenv("REDIS_URL", "not set"))
-    logger.info("DATABASE_URL: %s", "set" if os.getenv("DATABASE_URL") else "not set")
 
-    while not shutdown_event.is_set():
-        logger.info("Worker heartbeat - waiting for jobs...")
-        try:
-            await asyncio.wait_for(shutdown_event.wait(), timeout=5.0)
-        except asyncio.TimeoutError:
-            continue
+    db.init_db()
+    rc.init_redis()
 
-    logger.info("Worker shut down gracefully.")
+    logger.info("Connected to database and Redis")
+
+    try:
+        await worker_loop()
+    finally:
+        await rc.close_redis()
+        await db.close_db()
+        logger.info("Worker shut down gracefully")
 
 
 if __name__ == "__main__":

@@ -19,7 +19,7 @@
 - Add migrations (Alembic) or SQL bootstrap script.
 - Add basic validation with Pydantic.
 
-### Phase 2 — Worker MVP
+### Phase 2 — Worker MVP ✅
 
 - Worker polls Redis queue (blocking pop).
 - Job lifecycle:
