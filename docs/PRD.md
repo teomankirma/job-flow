@@ -359,11 +359,12 @@ Optional future:
 
 ```
 root/
- ├── apps/
- │    ├── api/      (FastAPI)
- │    ├── worker/   (Worker service)
- │    └── web/      (Next.js)
+ ├── app/                  # Next.js App Router
+ ├── services/
+ │    ├── api/             # FastAPI service
+ │    └── worker/          # Worker service
  ├── docker-compose.yml
+ ├── Dockerfile            # Next.js Dockerfile
  └── README.md
 ```
 
