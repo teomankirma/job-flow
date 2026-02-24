@@ -3,9 +3,9 @@
 ### Phase 0 — Repo + setup
 
 - Create monorepo structure:
-  - `apps/api` (FastAPI)
-  - `apps/worker` (Python worker)
-  - `apps/web` (Next.js)
+  - `services/api` (FastAPI)
+  - `services/worker` (Python worker)
+  - Next.js stays at root (`app/` directory)
 
 - Add `docker-compose.yml` with **Postgres + Redis**.
 - Add `.env.example` and basic README skeleton.
