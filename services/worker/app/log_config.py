@@ -12,7 +12,7 @@ class JSONFormatter(logging.Formatter):
             "logger": record.name,
             "message": record.getMessage(),
         }
-        for key in ("job_id", "job_type", "status", "attempts", "error", "duration_ms"):
+        for key in ("job_id", "job_type", "status", "attempts", "error", "duration_ms", "retry_delay_s"):
             value = getattr(record, key, None)
             if value is not None:
                 log_entry[key] = value if isinstance(value, (int, float, bool)) else str(value)

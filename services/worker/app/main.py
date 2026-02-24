@@ -24,6 +24,17 @@ logger = logging.getLogger(__name__)
 shutdown_event = asyncio.Event()
 in_flight_tasks: set[asyncio.Task] = set()
 
+# Lua script: atomically move due jobs from retry ZSET to main queue.
+# Prevents double-queuing even with multiple worker instances.
+PROMOTE_RETRY_SCRIPT = """
+local members = redis.call('ZRANGEBYSCORE', KEYS[1], '-inf', ARGV[1], 'LIMIT', 0, 10)
+for _, member in ipairs(members) do
+    redis.call('ZREM', KEYS[1], member)
+    redis.call('RPUSH', KEYS[2], member)
+end
+return #members
+"""
+
 
 def handle_signal(sig: int, _frame) -> None:
     logger.info(
@@ -56,9 +67,9 @@ async def process_job(job_id_str: str, semaphore: asyncio.Semaphore) -> None:
 
                 log_extra["job_type"] = job.type
 
-                if job.status != "pending":
+                if job.status not in ("pending", "retrying"):
                     logger.warning(
-                        "Job status is '%s', expected 'pending', skipping",
+                        "Job status is '%s', expected 'pending' or 'retrying', skipping",
                         job.status,
                         extra=log_extra,
                     )
@@ -107,16 +118,80 @@ async def process_job(job_id_str: str, semaphore: asyncio.Semaphore) -> None:
                     result = await session.execute(select(Job).where(Job.id == job_id))
                     job = result.scalar_one_or_none()
                     if job:
-                        job.status = "failed"
-                        job.error_message = error_msg[:2000]
-                        job.updated_at = _utcnow()
-                        await session.commit()
+                        if job.attempts < job.max_attempts:
+                            # Schedule retry with exponential backoff
+                            delay = 2 ** job.attempts
+                            retry_at = time.time() + delay
+                            job.status = "retrying"
+                            job.error_message = error_msg[:2000]
+                            job.updated_at = _utcnow()
+                            await session.commit()
+
+                            await rc.redis_client.zadd(
+                                Config.RETRY_QUEUE_NAME, {str(job_id): retry_at}
+                            )
+
+                            logger.info(
+                                "Job scheduled for retry in %ds (attempt %d/%d)",
+                                delay,
+                                job.attempts,
+                                job.max_attempts,
+                                extra={
+                                    **log_extra,
+                                    "status": "retrying",
+                                    "retry_delay_s": delay,
+                                },
+                            )
+                        else:
+                            # Max attempts exceeded -> dead-letter queue
+                            job.status = "dead_letter"
+                            job.error_message = error_msg[:2000]
+                            job.updated_at = _utcnow()
+                            await session.commit()
+
+                            await rc.redis_client.rpush(
+                                Config.DLQ_NAME, str(job_id)
+                            )
+
+                            logger.warning(
+                                "Job moved to dead-letter queue after %d attempts",
+                                job.attempts,
+                                extra={**log_extra, "status": "dead_letter"},
+                            )
             except Exception as db_exc:
                 logger.error(
-                    "Failed to update job status to 'failed' in DB: %s",
+                    "Failed to update job status in DB: %s",
                     db_exc,
                     extra=log_extra,
                 )
+
+
+async def retry_scheduler() -> None:
+    """Periodically move due jobs from retry ZSET to main queue."""
+    logger.info(
+        "Retry scheduler started (poll_interval=%.1fs)",
+        Config.RETRY_POLL_INTERVAL,
+    )
+
+    promote_script = rc.redis_client.register_script(PROMOTE_RETRY_SCRIPT)
+
+    while not shutdown_event.is_set():
+        try:
+            now = time.time()
+            promoted = await promote_script(
+                keys=[Config.RETRY_QUEUE_NAME, Config.QUEUE_NAME],
+                args=[now],
+            )
+            if promoted and promoted > 0:
+                logger.info("Promoted %d job(s) from retry queue", promoted)
+        except asyncio.CancelledError:
+            break
+        except Exception as exc:
+            logger.error("Error in retry scheduler: %s", exc, exc_info=True)
+
+        await asyncio.sleep(Config.RETRY_POLL_INTERVAL)
+
+    logger.info("Retry scheduler stopped")
 
 
 async def worker_loop() -> None:
@@ -173,7 +248,10 @@ async def main() -> None:
     logger.info("Connected to database and Redis")
 
     try:
-        await worker_loop()
+        await asyncio.gather(
+            worker_loop(),
+            retry_scheduler(),
+        )
     finally:
         await rc.close_redis()
         await db.close_db()
