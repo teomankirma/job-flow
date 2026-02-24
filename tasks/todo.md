@@ -89,3 +89,34 @@ Key decisions:
 - Naive UTC datetimes via `_utcnow()` helper to match `TIMESTAMP WITHOUT TIME ZONE` columns
 - Two-commit pattern: first commit sets `processing` + increments `attempts`, second sets final status
 - Separate DB session in error path to avoid corrupted session issues
+
+---
+
+# Phase 3 — Reliability
+
+## Tasks
+
+- [x] Create Alembic migration `002_add_idempotency_key` (column + partial unique index)
+- [x] Update both `models.py` files with `idempotency_key` column and index
+- [x] Update API schemas: add `retrying`/`dead_letter` statuses, `idempotency_key` to response
+- [x] Update API routes: `Idempotency-Key` header on POST, `status` filter on GET list
+- [x] Update worker config: `RETRY_QUEUE_NAME`, `DLQ_NAME`, `RETRY_POLL_INTERVAL`
+- [x] Update worker main: retry logic, `retry_scheduler()` coroutine, DLQ routing
+- [x] Update worker log config: add `retry_delay_s` to extra fields
+- [x] Run migration and verify all features end-to-end
+
+## Review
+
+Phase 3 complete. All reliability features verified:
+- **Retry with exponential backoff**: Failed jobs get `retrying` status, ZADD to Redis sorted set with score = `time.time() + 2^attempts`. Retry scheduler polls ZSET every 1s, promotes due jobs via atomic Lua script (ZRANGEBYSCORE + ZREM + RPUSH). Observed: 2s delay after attempt 1, 4s after attempt 2.
+- **Dead-letter queue**: Jobs exceeding `max_attempts` set to `dead_letter` status + RPUSH to `dead_letter_queue` Redis list. Verified with `max_attempts: 1` — failed job immediately dead-lettered.
+- **Idempotency-Key**: `POST /jobs` with `Idempotency-Key` header returns 201 on first call, 200 with existing job on duplicate. Race condition handled via `IntegrityError` catch on partial unique index.
+- **Status filter**: `GET /jobs?status=dead_letter` returns only dead-lettered jobs.
+- **Graceful shutdown**: Worker loop + retry scheduler both respect `shutdown_event`, in-flight jobs complete before exit.
+
+Key decisions:
+- Redis ZSET for delayed retry queue (atomic Lua script prevents double-queuing across workers)
+- New `retrying` and `dead_letter` statuses (clearer than overloading `failed`)
+- Idempotency key as HTTP header (not body field) — cleaner separation of concerns
+- `IntegrityError` handling for concurrent idempotency key race conditions
+- `retry_scheduler()` runs as a peer coroutine to `worker_loop()` via `asyncio.gather()`

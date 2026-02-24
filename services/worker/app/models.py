@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Index, Text, text
+from sqlalchemy import Index, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -24,6 +24,7 @@ class Job(Base):
     attempts: Mapped[int] = mapped_column(nullable=False, default=0)
     max_attempts: Mapped[int] = mapped_column(nullable=False, default=3)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    idempotency_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         nullable=False,
         server_default=text("now()"),
@@ -37,4 +38,10 @@ class Job(Base):
     __table_args__ = (
         Index("ix_jobs_status", "status"),
         Index("ix_jobs_created_at", "created_at"),
+        Index(
+            "ix_jobs_idempotency_key",
+            "idempotency_key",
+            unique=True,
+            postgresql_where=text("idempotency_key IS NOT NULL"),
+        ),
     )

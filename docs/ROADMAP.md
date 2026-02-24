@@ -31,7 +31,7 @@
   - `email.send` (simulated)
 - Add structured logs.
 
-### Phase 3 — Reliability
+### Phase 3 — Reliability ✅
 
 - **Retry with exponential backoff** + `max_attempts`.
 - **Dead-letter queue** (Redis list) when exceeded.

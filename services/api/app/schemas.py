@@ -10,6 +10,8 @@ class JobStatus(str, Enum):
     processing = "processing"
     completed = "completed"
     failed = "failed"
+    retrying = "retrying"
+    dead_letter = "dead_letter"
 
 
 class JobType(str, Enum):
@@ -32,6 +34,7 @@ class JobResponse(BaseModel):
     attempts: int
     max_attempts: int
     error_message: str | None
+    idempotency_key: str | None
     created_at: datetime
     updated_at: datetime
 
