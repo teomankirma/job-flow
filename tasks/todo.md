@@ -55,3 +55,37 @@ Key decisions:
 - Global module state for engine/redis (simpler than `app.state`)
 - DB commit before Redis push (safer failure mode)
 - Alembic migrations run manually, not on startup
+
+---
+
+# Phase 2 — Worker MVP
+
+## Tasks
+
+- [x] Create `app/config.py` (env-based configuration: queue name, concurrency, poll timeout)
+- [x] Create `app/log_config.py` (structured JSON logging with `JSONFormatter`)
+- [x] Create `app/database.py` (async SQLAlchemy engine/session, same pattern as API)
+- [x] Create `app/redis_client.py` (async Redis client, same pattern as API)
+- [x] Create `app/models.py` (Job SQLAlchemy model, copy from API)
+- [x] Create `app/handlers/email_send.py` (simulated email, always succeeds)
+- [x] Create `app/handlers/report_generate.py` (simulated report, ~30% failure rate)
+- [x] Create `app/handlers/__init__.py` (handler registry: job type → handler function)
+- [x] Rewrite `app/main.py` (BLPOP loop, process_job, concurrency via semaphore, graceful shutdown)
+- [x] Verify worker processes jobs end-to-end
+
+## Review
+
+Phase 2 complete. Worker MVP fully operational:
+- `email.send` jobs: picked up within ~1s, processed in ~1s, status → `completed`
+- `report.generate` jobs: 2-5s processing, ~30% random failure rate working
+- Failed jobs: `status: "failed"`, `error_message` properly set, `attempts: 1`
+- Concurrency: 5 simultaneous jobs (semaphore), remaining jobs queued until slots free
+- Structured JSON logs: all lifecycle events logged with `job_id`, `job_type`, `status`, `duration_ms`
+- Graceful shutdown: SIGTERM → stops accepting jobs → waits for in-flight → clean exit
+
+Key decisions:
+- Named logging module `log_config.py` to avoid shadowing stdlib `logging`
+- Module-level imports (`from app import database as db`) to avoid stale references after `init_*()` calls
+- Naive UTC datetimes via `_utcnow()` helper to match `TIMESTAMP WITHOUT TIME ZONE` columns
+- Two-commit pattern: first commit sets `processing` + increments `attempts`, second sets final status
+- Separate DB session in error path to avoid corrupted session issues
