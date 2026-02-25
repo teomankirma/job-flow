@@ -46,7 +46,7 @@
   - `/jobs/[id]` (details + live polling)
 - Polling every 1–2s (simple `setInterval` or React Query).
 
-### Phase 5 — “Production polish”
+### Phase 5 — “Production polish” ✅
 
 - Metrics endpoint: `GET /metrics` (queue size, totals, failures).
 - Rate limiting (basic, e.g., per IP in Redis).
