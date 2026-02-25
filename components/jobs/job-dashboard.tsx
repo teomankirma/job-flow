@@ -17,7 +17,7 @@ export function JobDashboard() {
   const [statusFilter, setStatusFilter] = useState<JobStatus | "all">("all");
   const [page, setPage] = useState(0);
 
-  const { data, isLoading, isError, error } = useJobs({
+  const { data, isLoading, isPlaceholderData, isError, error } = useJobs({
     limit: PAGE_SIZE,
     offset: page * PAGE_SIZE,
     status: statusFilter === "all" ? undefined : statusFilter,
@@ -57,7 +57,7 @@ export function JobDashboard() {
           </p>
         </div>
       ) : data && data.items.length > 0 ? (
-        <>
+        <div className={`transition-opacity duration-200 ${isPlaceholderData ? "opacity-50" : "opacity-100"}`}>
           <div className="hidden md:block">
             <JobTable jobs={data.items} />
           </div>
@@ -73,7 +73,7 @@ export function JobDashboard() {
               onPageChange={setPage}
             />
           )}
-        </>
+        </div>
       ) : (
         <div className="border border-border bg-card p-8 text-center">
           <p className="font-mono text-sm text-muted-foreground">

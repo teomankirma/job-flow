@@ -14,7 +14,9 @@ interface RetryButtonProps {
 export function RetryButton({ jobId, status, size = "sm" }: RetryButtonProps) {
   const { mutate, isPending } = useRetryJob();
 
-  if (status !== "failed" && status !== "dead_letter") return null;
+  const canRetry = status === "failed" || status === "dead_letter";
+
+  if (!canRetry) return null;
 
   return (
     <Button
@@ -28,9 +30,9 @@ export function RetryButton({ jobId, status, size = "sm" }: RetryButtonProps) {
           onError: (err) => toast.error(`Retry failed: ${err.message}`),
         });
       }}
-      className="font-mono text-xs uppercase tracking-wider"
+      className="font-mono text-xs uppercase tracking-wider h-6 px-2 py-0"
     >
-      {isPending ? "Retrying..." : "Retry"}
+      {isPending ? "..." : "Retry"}
     </Button>
   );
 }

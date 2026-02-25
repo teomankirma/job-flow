@@ -1,6 +1,11 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import { listJobs, getJob, createJob, retryJob } from "./jobs";
 import type { CreateJobRequest } from "@/lib/types";
 import { generateIdempotencyKey } from "@/lib/utils/format";
@@ -23,6 +28,7 @@ export function useJobs(params?: {
     queryKey: jobKeys.list(params ?? {}),
     queryFn: () => listJobs(params),
     refetchInterval: 2000,
+    placeholderData: keepPreviousData,
   });
 }
 

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import {
   Table,
+  TableBody,
   TableCell,
   TableHead,
   TableHeader,
@@ -11,9 +12,8 @@ import {
 import { StatusBadge } from "./status-badge";
 import { JobTypeLabel } from "./job-type-label";
 import { RetryButton } from "./retry-button";
-import { formatRelativeTime, truncateId } from "@/lib/utils/format";
-import { motion } from "motion/react";
-import { staggerContainer, staggerItem } from "@/lib/motion";
+import { RelativeTime } from "./relative-time";
+import { truncateId } from "@/lib/utils/format";
 import type { Job } from "@/lib/types";
 
 interface JobTableProps {
@@ -48,16 +48,10 @@ export function JobTable({ jobs }: JobTableProps) {
             </TableHead>
           </TableRow>
         </TableHeader>
-        <motion.tbody
-          variants={staggerContainer}
-          initial="hidden"
-          animate="visible"
-          className="[&_tr:last-child]:border-0"
-        >
+        <TableBody>
           {jobs.map((job) => (
-            <motion.tr
+            <TableRow
               key={job.id}
-              variants={staggerItem}
               onClick={() => router.push(`/jobs/${job.id}`)}
               className="cursor-pointer border-b border-border transition-colors hover:bg-secondary/50"
             >
@@ -74,14 +68,16 @@ export function JobTable({ jobs }: JobTableProps) {
                 {job.attempts}/{job.max_attempts}
               </TableCell>
               <TableCell className="font-mono text-xs text-muted-foreground">
-                {formatRelativeTime(job.created_at)}
+                <RelativeTime date={job.created_at} />
               </TableCell>
               <TableCell>
-                <RetryButton jobId={job.id} status={job.status} />
+                <div className="flex items-center h-6">
+                  <RetryButton jobId={job.id} status={job.status} />
+                </div>
               </TableCell>
-            </motion.tr>
+            </TableRow>
           ))}
-        </motion.tbody>
+        </TableBody>
       </Table>
     </div>
   );
