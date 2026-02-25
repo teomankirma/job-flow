@@ -38,7 +38,7 @@
 - **Idempotency-Key** support on `POST /jobs`.
 - Graceful shutdown for workers.
 
-### Phase 4 — Frontend MVP
+### Phase 4 — Frontend MVP ✅
 
 - Next.js pages:
   - `/` dashboard (jobs list + status)
@@ -64,4 +64,3 @@
   - screenshots of UI
   - tradeoffs + future improvements
 - Add small load script to enqueue 1k jobs and show scaling workers.
-

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useJobs } from "@/lib/api/hooks";
 import { JobStatusTabs } from "./job-status-tabs";
 import { JobTable } from "./job-table";
@@ -14,8 +15,27 @@ import type { JobStatus } from "@/lib/types";
 const PAGE_SIZE = 20;
 
 export function JobDashboard() {
-  const [statusFilter, setStatusFilter] = useState<JobStatus | "all">("all");
-  const [page, setPage] = useState(0);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const statusFilter = (searchParams.get("status") ?? "all") as
+    | JobStatus
+    | "all";
+  const page = Math.max(0, Number(searchParams.get("page") ?? "1") - 1);
+
+  const updateParams = useCallback(
+    (updates: Record<string, string | null>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (value === null) params.delete(key);
+        else params.set(key, value);
+      }
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [searchParams, router, pathname],
+  );
 
   const { data, isLoading, isPlaceholderData, isError, error } = useJobs({
     limit: PAGE_SIZE,
@@ -24,8 +44,16 @@ export function JobDashboard() {
   });
 
   const handleFilterChange = (status: JobStatus | "all") => {
-    setStatusFilter(status);
-    setPage(0);
+    updateParams({
+      status: status === "all" ? null : status,
+      page: null,
+    });
+  };
+
+  const handlePageChange = (newPage: number) => {
+    updateParams({
+      page: newPage === 0 ? null : String(newPage + 1),
+    });
   };
 
   return (
@@ -57,7 +85,9 @@ export function JobDashboard() {
           </p>
         </div>
       ) : data && data.items.length > 0 ? (
-        <div className={`transition-opacity duration-200 ${isPlaceholderData ? "opacity-50" : "opacity-100"}`}>
+        <div
+          className={`transition-opacity duration-200 ${isPlaceholderData ? "opacity-50" : "opacity-100"}`}
+        >
           <div className="hidden md:block">
             <JobTable jobs={data.items} />
           </div>
@@ -70,7 +100,7 @@ export function JobDashboard() {
               total={data.total}
               pageSize={PAGE_SIZE}
               currentPage={page}
-              onPageChange={setPage}
+              onPageChange={handlePageChange}
             />
           )}
         </div>

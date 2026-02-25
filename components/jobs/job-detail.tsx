@@ -8,6 +8,7 @@ import { StatusBadge } from "./status-badge";
 import { JobTypeLabel } from "./job-type-label";
 import { RetryButton } from "./retry-button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { JOB_TYPE_CONFIG } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils/format";
 import { motion } from "motion/react";
 import { slideUp } from "@/lib/motion";
@@ -64,6 +65,11 @@ export function JobDetail({ jobId }: JobDetailProps) {
           <DetailRow label="Type">
             <JobTypeLabel type={job.type} />
           </DetailRow>
+          <DetailRow
+            label="Behavior"
+            value={JOB_TYPE_CONFIG[job.type].behavior}
+            mono
+          />
           <DetailRow label="Status">
             <StatusBadge status={job.status} />
           </DetailRow>

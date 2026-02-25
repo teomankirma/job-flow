@@ -48,18 +48,22 @@ export const JOB_STATUS_CONFIG: Record<
 
 export const JOB_TYPE_CONFIG: Record<
   JobType,
-  { label: string; description: string }
+  { label: string; description: string; behavior: string }
 > = {
   "email.send": {
     label: "Email Send",
     description: "Simulate sending an email notification",
+    behavior: "Always succeeds · ~1s processing",
   },
   "report.generate": {
     label: "Report Generate",
     description: "Generate a report (may fail randomly)",
+    behavior: "~30% random failure rate · 2-5s processing · tests retry logic",
   },
   "image.process": {
     label: "Image Process",
     description: "Process an image (heavy simulation)",
+    behavior:
+      "Always fails (no handler) · tests dead-letter queue path",
   },
 };

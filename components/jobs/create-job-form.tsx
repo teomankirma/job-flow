@@ -120,6 +120,9 @@ export function CreateJobForm() {
                   ))}
                 </SelectContent>
               </Select>
+              <p className="mt-3 font-mono text-xs text-muted-foreground">
+                {JOB_TYPE_CONFIG[jobType].behavior}
+              </p>
             </div>
 
             <div className="space-y-2">
