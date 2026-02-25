@@ -55,12 +55,14 @@
   - API: create job, status transitions
   - Worker: retries + DLQ path
 
-### Phase 6 — Portfolio-ready
+### Phase 6 — Portfolio-ready ✅
 
 - Strong README:
   - architecture diagram
   - local run instructions
   - API examples (curl)
-  - screenshots of UI
-  - tradeoffs + future improvements
-- Add small load script to enqueue 1k jobs and show scaling workers.
+  - design decisions + tradeoffs
+  - future improvements
+- Landing page: project overview, tech stack, key features, architecture diagram.
+- Dashboard moved to `/dashboard` route.
+- Load testing script (`scripts/load_test.py`) to enqueue 1k jobs and watch metrics.

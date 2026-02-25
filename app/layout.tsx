@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { MotionProvider } from "@/components/providers/motion-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { AppHeader } from "@/components/layout/app-header";
 import "./globals.css";
@@ -31,11 +32,13 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground min-h-screen bg-grid-pattern`}
       >
         <QueryProvider>
-          <AppHeader />
-          <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-            {children}
-          </main>
-          <Toaster />
+          <MotionProvider>
+            <AppHeader />
+            <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+              {children}
+            </main>
+            <Toaster />
+          </MotionProvider>
         </QueryProvider>
       </body>
     </html>

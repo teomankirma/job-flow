@@ -174,3 +174,28 @@ Key decisions:
 - FakeRedis/FakePipeline test doubles for Redis operations (no real Redis needed)
 - FastAPI `dependency_overrides` for test isolation (mock DB sessions, fake Redis)
 - `asyncio_mode = auto` in pytest.ini for cleaner async test configuration
+
+---
+
+# Phase 6 — Portfolio-Ready
+
+## Tasks
+
+- [x] Move dashboard from `/` to `/dashboard` route (`app/dashboard/page.tsx`)
+- [x] Update navigation: Dashboard link → `/dashboard`, logo stays `/`
+- [x] Update Back button in job detail to link to `/dashboard`
+- [x] Create landing page component (`components/about/about-content.tsx`)
+- [x] Update homepage (`app/page.tsx`) with project overview, tech stack, features, architecture
+- [x] Create load test script (`scripts/load_test.py`) — async, handles rate limiting, metrics polling
+- [x] Rewrite `README.md` — architecture diagram, API examples, design decisions, project structure
+- [x] Update `docs/ROADMAP.md` to mark Phase 6 complete
+- [x] Verify build passes and all pages render correctly
+
+## Review
+
+Phase 6 complete. All deliverables verified:
+- **Route restructure**: Dashboard moved to `/dashboard`. Homepage now serves the project landing page. Logo links to `/`, nav links to `/dashboard` and `/create`. Back button in job detail links to `/dashboard`.
+- **Landing page**: Hero with tagline + CTA buttons, tech stack (3-column: Backend/Frontend/Infra with badges), 8 feature cards (2-col grid with lucide icons), ASCII architecture diagram. Uses existing Card, Badge, motion variants. Dark industrial theme maintained.
+- **Load test script**: `scripts/load_test.py` — async httpx with semaphore concurrency (50), handles 429 with backoff, progress output, `--poll` flag for live metrics watching. CLI args: `--url`, `--count`, `--poll`.
+- **README**: Complete rewrite with ASCII architecture diagram, features list, tech stack table, quick start, API reference (6 curl examples), job types table, load testing instructions, 6 design decisions explained, updated project structure, future improvements.
+- **Build**: `next build` compiles successfully, all 4 routes generated (/, /dashboard, /create, /jobs/[id]). Zero lint errors.

@@ -10,7 +10,7 @@ import { RetryButton } from "./retry-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { JOB_TYPE_CONFIG } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils/format";
-import { motion } from "motion/react";
+import { m } from "motion/react";
 import { slideUp } from "@/lib/motion";
 
 interface JobDetailProps {
@@ -40,7 +40,7 @@ export function JobDetail({ jobId }: JobDetailProps) {
   if (!job) return null;
 
   return (
-    <motion.div
+    <m.div
       variants={slideUp}
       initial="hidden"
       animate="visible"
@@ -125,13 +125,13 @@ export function JobDetail({ jobId }: JobDetailProps) {
           </CardContent>
         </Card>
       )}
-    </motion.div>
+    </m.div>
   );
 }
 
 function BackButton() {
   return (
-    <Link href="/">
+    <Link href="/dashboard">
       <Button
         variant="ghost"
         size="sm"

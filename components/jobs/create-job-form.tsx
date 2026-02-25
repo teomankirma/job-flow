@@ -17,7 +17,7 @@ import {
 import { useCreateJob } from "@/lib/api/hooks";
 import { JOB_TYPE_CONFIG, type JobType } from "@/lib/types";
 import { toast } from "sonner";
-import { motion } from "motion/react";
+import { m } from "motion/react";
 import { slideUp } from "@/lib/motion";
 
 const JOB_TYPES = Object.entries(JOB_TYPE_CONFIG) as [
@@ -84,7 +84,7 @@ export function CreateJobForm() {
   };
 
   return (
-    <motion.div variants={slideUp} initial="hidden" animate="visible">
+    <m.div variants={slideUp} initial="hidden" animate="visible">
       <Card>
         <CardHeader>
           <CardTitle className="font-mono text-sm uppercase tracking-widest">
@@ -178,6 +178,6 @@ export function CreateJobForm() {
           </form>
         </CardContent>
       </Card>
-    </motion.div>
+    </m.div>
   );
 }
