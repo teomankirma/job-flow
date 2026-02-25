@@ -24,6 +24,7 @@ export function RetryButton({ jobId, status, size = "sm" }: RetryButtonProps) {
       size={size}
       disabled={isPending}
       onClick={(e) => {
+        e.preventDefault();
         e.stopPropagation();
         mutate(jobId, {
           onSuccess: () => toast.success("Job re-queued for processing"),
