@@ -208,12 +208,11 @@ async def worker_loop() -> None:
 
     while not shutdown_event.is_set():
         try:
-            result = await rc.redis_client.blpop(queue_name, timeout=poll_timeout)
+            job_id_str = await rc.redis_client.lpop(queue_name)
 
-            if result is None:
+            if job_id_str is None:
+                await asyncio.sleep(poll_timeout)
                 continue
-
-            _key, job_id_str = result
 
             logger.info("Job received from queue", extra={"job_id": job_id_str})
 
