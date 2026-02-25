@@ -1,11 +1,12 @@
-import { Suspense } from "react";
-import { JobDashboard } from "@/components/jobs/job-dashboard";
-import { DashboardSkeleton } from "@/components/jobs/dashboard-skeleton";
+import type { Metadata } from "next";
+import { AboutContent } from "@/components/about/about-content";
 
-export default function DashboardPage() {
-  return (
-    <Suspense fallback={<DashboardSkeleton />}>
-      <JobDashboard />
-    </Suspense>
-  );
+export const metadata: Metadata = {
+  title: "Job Flow — Distributed Job Processing System",
+  description:
+    "A distributed background job processing system with retry logic, dead-letter queues, and a real-time dashboard. Built with FastAPI, Redis, PostgreSQL, and Next.js.",
+};
+
+export default function HomePage() {
+  return <AboutContent />;
 }

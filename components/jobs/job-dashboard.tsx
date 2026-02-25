@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { Suspense, useCallback } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useJobs } from "@/lib/api/hooks";
 import { JobStatusTabs } from "./job-status-tabs";
@@ -8,13 +8,21 @@ import { JobTable } from "./job-table";
 import { JobCardList } from "./job-card-list";
 import { JobPagination } from "./job-pagination";
 import { DashboardSkeleton } from "./dashboard-skeleton";
-import { motion } from "motion/react";
+import { m } from "motion/react";
 import { fadeIn } from "@/lib/motion";
 import type { JobStatus } from "@/lib/types";
 
 const PAGE_SIZE = 20;
 
 export function JobDashboard() {
+  return (
+    <Suspense fallback={<DashboardSkeleton />}>
+      <JobDashboardInner />
+    </Suspense>
+  );
+}
+
+function JobDashboardInner() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -57,7 +65,7 @@ export function JobDashboard() {
   };
 
   return (
-    <motion.div
+    <m.div
       variants={fadeIn}
       initial="hidden"
       animate="visible"
@@ -111,6 +119,6 @@ export function JobDashboard() {
           </p>
         </div>
       )}
-    </motion.div>
+    </m.div>
   );
 }
