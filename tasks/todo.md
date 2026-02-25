@@ -143,3 +143,34 @@ Key decisions:
 - [x] Build Create Job page: form with type selector, JSON payload, max attempts
 - [x] Build Job Detail page: metadata rows, payload display, error card, live polling
 - [x] Verify build and lint pass
+
+---
+
+# Phase 5 — Production Polish
+
+## Tasks
+
+- [x] Create `app/routes/metrics.py` (GET /metrics — job counts by status from DB + queue lengths from Redis)
+- [x] Create `app/middleware/rate_limit.py` (Redis sliding-window per IP, POST only, 60 req/min default)
+- [x] Update `app/main.py` (register metrics router, rate limit middleware, Alembic auto-migration on startup)
+- [x] Add test dependencies to `services/api/requirements.txt` (pytest, pytest-asyncio, httpx)
+- [x] Add test dependencies to `services/worker/requirements.txt` (pytest, pytest-asyncio)
+- [x] Create API test suite: `tests/conftest.py`, `test_jobs.py`, `test_metrics.py`, `test_rate_limit.py` (18 tests)
+- [x] Create worker test suite: `tests/conftest.py`, `test_worker.py` (8 tests)
+- [x] Verify all 26 tests pass
+
+## Review
+
+Phase 5 complete. All features verified:
+- **Metrics endpoint**: `GET /metrics` returns JSON with `total_jobs`, `active_jobs`, `completed_jobs`, `failed_jobs`, `dead_letter_jobs`, `queue_length`, `retry_queue_length`, `dlq_length`. Single DB query with conditional aggregation + Redis LLEN/ZCARD.
+- **Rate limiting**: Sliding-window per IP via Redis ZSET pipeline. Only POST requests rate-limited. Returns 429 with `Retry-After` header. Configurable via `RATE_LIMIT_MAX`/`RATE_LIMIT_WINDOW` env vars. Graceful fallback when Redis unavailable.
+- **Alembic auto-migration**: `alembic upgrade head` runs in API lifespan before `init_db()`. Idempotent, safe on every startup. Wrapped in `try/except FileNotFoundError` for test environments.
+- **API tests (18)**: Create job (success, validation, idempotency), get job (found, not found), list jobs (empty, filtered, with items), retry job (failed, dead_letter, conflict, not found), metrics (counts, queue lengths), rate limiting (GET bypass, POST threshold, Retry-After header).
+- **Worker tests (8)**: process_job (success path, retry path, DLQ path, invalid ID, not found), handler registry (known, unknown), exponential backoff formula.
+
+Key decisions:
+- No external libraries for metrics or rate limiting — self-contained implementations
+- `func.count().filter()` for conditional aggregation in metrics (single DB round-trip)
+- FakeRedis/FakePipeline test doubles for Redis operations (no real Redis needed)
+- FastAPI `dependency_overrides` for test isolation (mock DB sessions, fake Redis)
+- `asyncio_mode = auto` in pytest.ini for cleaner async test configuration
