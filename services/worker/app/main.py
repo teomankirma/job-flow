@@ -1,8 +1,10 @@
 import asyncio
 import logging
+import os
 import signal
 import time
 import uuid
+from aiohttp import web
 from datetime import datetime, timezone
 
 
@@ -234,6 +236,22 @@ async def worker_loop() -> None:
     logger.info("Worker loop stopped")
 
 
+async def health_handler(_request: web.Request) -> web.Response:
+    return web.json_response({"status": "ok"})
+
+
+async def start_health_server() -> None:
+    """Minimal HTTP server so Railway knows the container is alive."""
+    app = web.Application()
+    app.router.add_get("/health", health_handler)
+    port = int(os.environ.get("PORT", "8001"))
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    logger.info("Health server listening on port %d", port)
+
+
 async def main() -> None:
     setup_logging()
 
@@ -246,6 +264,8 @@ async def main() -> None:
     rc.init_redis()
 
     logger.info("Connected to database and Redis")
+
+    await start_health_server()
 
     try:
         await asyncio.gather(
