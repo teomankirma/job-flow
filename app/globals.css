@@ -1,26 +1,109 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  /* Status colors exposed to Tailwind */
+  --color-status-pending: var(--status-pending);
+  --color-status-processing: var(--status-processing);
+  --color-status-completed: var(--status-completed);
+  --color-status-failed: var(--status-failed);
+  --color-status-retrying: var(--status-retrying);
+  --color-status-dead-letter: var(--status-dead-letter);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Dark-only industrial theme — no light mode */
+:root {
+  --radius: 0.125rem;
+
+  --background: oklch(0.12 0.005 270);
+  --foreground: oklch(0.9 0.01 270);
+
+  --card: oklch(0.155 0.005 270);
+  --card-foreground: oklch(0.9 0.01 270);
+
+  --popover: oklch(0.155 0.005 270);
+  --popover-foreground: oklch(0.9 0.01 270);
+
+  --primary: oklch(0.65 0.18 250);
+  --primary-foreground: oklch(0.98 0 0);
+
+  --secondary: oklch(0.2 0.01 270);
+  --secondary-foreground: oklch(0.88 0.01 270);
+
+  --muted: oklch(0.18 0.005 270);
+  --muted-foreground: oklch(0.55 0.01 270);
+
+  --accent: oklch(0.2 0.01 270);
+  --accent-foreground: oklch(0.88 0.01 270);
+
+  --destructive: oklch(0.63 0.2 25);
+
+  --border: oklch(0.25 0.01 270);
+  --input: oklch(0.25 0.01 270);
+  --ring: oklch(0.65 0.18 250);
+
+  /* Status indicator colors */
+  --status-pending: oklch(0.8 0.16 80);
+  --status-processing: oklch(0.75 0.15 200);
+  --status-completed: oklch(0.72 0.19 150);
+  --status-failed: oklch(0.63 0.2 25);
+  --status-retrying: oklch(0.65 0.2 300);
+  --status-dead-letter: oklch(0.45 0.01 270);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Subtle grid pattern for depth */
+.bg-grid-pattern {
+  background-image:
+    linear-gradient(to right, oklch(1 0 0 / 2%) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(1 0 0 / 2%) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Processing LED pulse */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.animate-pulse-glow {
+  animation: pulse-glow 1.5s ease-in-out infinite;
 }

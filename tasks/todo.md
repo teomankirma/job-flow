@@ -120,3 +120,26 @@ Key decisions:
 - Idempotency key as HTTP header (not body field) — cleaner separation of concerns
 - `IntegrityError` handling for concurrent idempotency key race conditions
 - `retry_scheduler()` runs as a peer coroutine to `worker_loop()` via `asyncio.gather()`
+
+---
+
+# Phase 4 — Frontend MVP
+
+## Tasks
+
+- [x] Add CORS middleware to FastAPI (`services/api/app/main.py`)
+- [x] Add `POST /jobs/{id}/retry` endpoint to API routes
+- [x] Install dependencies: `@tanstack/react-query`, `motion`, shadcn/ui (10 components)
+- [x] Customize theme: dark industrial palette, sharp corners, status color variables, grid pattern
+- [x] Override shadcn components: badge (status variants), button/card (no rounded corners)
+- [x] Create TypeScript types (`lib/types/jobs.ts`) matching API contract
+- [x] Create API client layer (`lib/api/client.ts`, `lib/api/jobs.ts`)
+- [x] Create TanStack Query hooks with polling (`lib/api/hooks.ts`)
+- [x] Create utility functions (`lib/utils/format.ts`) and motion presets (`lib/motion/variants.ts`)
+- [x] Create QueryProvider and AppHeader layout components
+- [x] Update root layout with providers, header, toaster, dark theme
+- [x] Build shared components: StatusBadge, RetryButton, JobTypeLabel
+- [x] Build Dashboard page: job table (desktop), card list (mobile), status filter tabs, pagination
+- [x] Build Create Job page: form with type selector, JSON payload, max attempts
+- [x] Build Job Detail page: metadata rows, payload display, error card, live polling
+- [x] Verify build and lint pass
