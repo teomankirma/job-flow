@@ -2,6 +2,8 @@
 
 A distributed background job processing system with retry logic, dead-letter queues, and a real-time dashboard. Built with FastAPI, Redis, PostgreSQL, and Next.js.
 
+**Live Demo:** [teo-job-flow.vercel.app](https://teo-job-flow.vercel.app)
+
 Demonstrates production-grade patterns: async job execution, exponential backoff retries, idempotency, rate limiting, graceful shutdown, and full-stack integration — all orchestrated via Docker Compose.
 
 ## Architecture
@@ -226,6 +228,20 @@ cd services/api && pytest -v
 # Worker tests (8 tests)
 cd services/worker && pytest -v
 ```
+
+## Deployment
+
+The app is deployed across four managed services:
+
+| Component       | Provider   | Purpose                              |
+|-----------------|------------|--------------------------------------|
+| Frontend        | Vercel     | Next.js static + edge rendering      |
+| API             | Railway    | FastAPI server (auto-deploys on push)|
+| Worker          | Railway    | Background job processor             |
+| Database        | Neon       | Serverless PostgreSQL                |
+| Queue / Cache   | Upstash    | Serverless Redis                     |
+
+Environment variables wire everything together — `NEXT_PUBLIC_API_URL` on Vercel points to the Railway API, which connects to Neon and Upstash via `DATABASE_URL` and `REDIS_URL`.
 
 ## Future Improvements
 
