@@ -59,6 +59,31 @@ async def create_job(
     return job
 
 
+@router.post("/{job_id}/retry", response_model=JobResponse)
+async def retry_job(
+    job_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    redis: Redis = Depends(get_redis),
+):
+    result = await session.execute(select(Job).where(Job.id == job_id))
+    job = result.scalar_one_or_none()
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.status not in ("failed", "dead_letter"):
+        raise HTTPException(
+            status_code=409,
+            detail="Job can only be retried when failed or dead_letter",
+        )
+
+    job.status = "pending"
+    job.error_message = None
+    job.attempts = 0
+    await session.commit()
+    await session.refresh(job)
+    await redis.rpush("job_queue", str(job.id))
+    return job
+
+
 @router.get("/{job_id}", response_model=JobResponse)
 async def get_job(
     job_id: uuid.UUID,

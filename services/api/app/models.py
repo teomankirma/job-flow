@@ -32,7 +32,7 @@ class Job(Base):
     updated_at: Mapped[datetime] = mapped_column(
         nullable=False,
         server_default=text("now()"),
-        onupdate=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
     )
 
     __table_args__ = (
